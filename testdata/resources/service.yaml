@@ -41,10 +41,10 @@ spec:
   ingressClassName: nginx
   tls:
   - hosts:
-    - '*.borisd.ru'
-    secretName: star-borisd-ru-tls
+    - '*.example.com'
+    secretName: star-example-com-tls
   rules:
-  - host: acmetest.borisd.ru
+  - host: acmetest.example.com
     http:
       paths:
       - path: /

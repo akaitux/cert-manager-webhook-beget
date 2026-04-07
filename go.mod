@@ -1,4 +1,4 @@
-module github.com/boryashkin/cert-manager-webhook-beget
+module github.com/akaitux/cert-manager-webhook-beget
 
 go 1.19
 

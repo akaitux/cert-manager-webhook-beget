@@ -9,11 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/boryashkin/cert-manager-webhook-beget/begetapi"
+	"github.com/akaitux/cert-manager-webhook-beget/begetapi"
 
 	acme "github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
-	certmgrv1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -49,8 +48,35 @@ func main() {
 }
 
 type begetDNSProviderConfig struct {
-	APILoginSecretRef  certmgrv1.SecretKeySelector `json:"apiLoginSecretRef"`
-	APIPasswdSecretRef certmgrv1.SecretKeySelector `json:"apiPasswdSecretRef"`
+	APILoginSecretRef  secretKeySelector `json:"apiLoginSecretRef"`
+	APIPasswdSecretRef secretKeySelector `json:"apiPasswdSecretRef"`
+}
+
+type secretKeySelector struct {
+	// Accept both the legacy "name" field and the more explicit "secretName"
+	// to stay compatible across webhook config variants.
+	Name       string `json:"name,omitempty"`
+	SecretName string `json:"secretName,omitempty"`
+	Key        string `json:"key,omitempty"`
+}
+
+func (s secretKeySelector) resourceName() string {
+	if s.Name != "" {
+		return s.Name
+	}
+
+	return s.SecretName
+}
+
+func (s secretKeySelector) validate(field string) error {
+	if s.resourceName() == "" {
+		return fmt.Errorf("%s secret name is required", field)
+	}
+	if s.Key == "" {
+		return fmt.Errorf("%s secret key is required", field)
+	}
+
+	return nil
 }
 
 func loadConfig(cfgJSON *extapi.JSON) (begetDNSProviderConfig, error) {
@@ -64,15 +90,24 @@ func loadConfig(cfgJSON *extapi.JSON) (begetDNSProviderConfig, error) {
 	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
 		return cfg, fmt.Errorf("error decoding solver config: %v", err)
 	}
+	if err := cfg.APILoginSecretRef.validate("apiLoginSecretRef"); err != nil {
+		return cfg, err
+	}
+	if err := cfg.APIPasswdSecretRef.validate("apiPasswdSecretRef"); err != nil {
+		return cfg, err
+	}
 
 	return cfg, nil
 }
 
-func (s *Solver) credentials(namespace string, login, password certmgrv1.SecretKeySelector) (begetapi.Credentials, error) {
+func (s *Solver) credentials(namespace string, login, password secretKeySelector) (begetapi.Credentials, error) {
 	klog.Info("solver.credentials")
+	loginSecretName := login.resourceName()
+	passwordSecretName := password.resourceName()
+
 	sec, err := s.k8sClient.CoreV1().
 		Secrets(namespace).
-		Get(context.TODO(), login.Name, v1.GetOptions{})
+		Get(context.TODO(), loginSecretName, v1.GetOptions{})
 	if err != nil {
 		klog.Errorf("solver.credentials: calling k8s: %v", err)
 
@@ -83,16 +118,16 @@ func (s *Solver) credentials(namespace string, login, password certmgrv1.SecretK
 	if !ok {
 		return begetapi.Credentials{}, fmt.Errorf("key %q not found in secret \"%s/%s\"",
 			login.Key,
-			login.Name,
+			loginSecretName,
 			namespace)
 	}
 
 	var passwordBytes []byte
 
-	if login.Name != password.Name {
+	if loginSecretName != passwordSecretName {
 		passwdSec, err := s.k8sClient.CoreV1().
 			Secrets(namespace).
-			Get(context.TODO(), password.Name, v1.GetOptions{})
+			Get(context.TODO(), passwordSecretName, v1.GetOptions{})
 		if err != nil {
 			return begetapi.Credentials{}, err
 		}
@@ -101,7 +136,7 @@ func (s *Solver) credentials(namespace string, login, password certmgrv1.SecretK
 		if !ok {
 			return begetapi.Credentials{}, fmt.Errorf("key %q not found in secret \"%s/%s\"",
 				password.Key,
-				password.Name,
+				passwordSecretName,
 				namespace)
 		}
 	} else {
@@ -109,7 +144,7 @@ func (s *Solver) credentials(namespace string, login, password certmgrv1.SecretK
 		if !ok {
 			return begetapi.Credentials{}, fmt.Errorf("key %q not found in secret \"%s/%s\"",
 				password.Key,
-				password.Name,
+				passwordSecretName,
 				namespace)
 		}
 	}

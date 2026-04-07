@@ -12,15 +12,15 @@ spec:
     solvers:
     - selector:
         dnsZones:
-        - 'borisd.ru' # borisd.ru and *.borisd.ru
+        - 'example.com' # example.com and *.example.com
       dns01:
         webhook:
           config:
             apiLoginSecretRef:
-              name: beget-credentials
+              secretName: beget-credentials
               key: login
             apiPasswdSecretRef:
-              name: beget-credentials
+              secretName: beget-credentials
               key: passwd
-          groupName: acme.borisd.ru
+          groupName: acme.example.com
           solverName: beget
