@@ -43,11 +43,18 @@ The webhook accepts both `name` and `secretName` for backward compatibility, but
 
 Follow ***an example*** for details: [testdata/resources](testdata/resources/README.md).
 
-## Release 1.0.1
+## Helm
 
-- Image: `docker.io/akaitux/cert-manager-webhook-beget:1.0.1`
-- Helm chart version: `1.0.1`
-- App version: `1.0.1`
+apiVersion: v2
+name: cert-manager-beget-webhook
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: cert-manager-beget-webhook
+    version: "*"
+    repository: "https://akaitux.github.io/helm-charts/"
+
 
 ## Tests
 
