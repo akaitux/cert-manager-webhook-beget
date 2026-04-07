@@ -12,7 +12,7 @@ spec:
     solvers:
     - selector:
         dnsZones:
-        - 'borisd.ru' # borisd.ru and *.borisd.ru
+        - 'example.com' # example.com and *.example.com
       dns01:
         webhook:
           config:
