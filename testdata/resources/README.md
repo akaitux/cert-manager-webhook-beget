@@ -27,4 +27,5 @@ For debugging use:
 - `kubectl get certificaterequest -A` then describe
 - `kubectl get challenge -A` then describe
 
-
+In webhook config, prefer `secretName` for secret references. The webhook still accepts `name` for backward compatibility.
+Default examples in this fork use the group name `acme.example.com`.

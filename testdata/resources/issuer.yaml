@@ -17,10 +17,10 @@ spec:
         webhook:
           config:
             apiLoginSecretRef:
-              name: beget-credentials
+              secretName: beget-credentials
               key: login
             apiPasswdSecretRef:
-              name: beget-credentials
+              secretName: beget-credentials
               key: passwd
-          groupName: acme.borisd.ru
+          groupName: acme.example.com
           solverName: beget

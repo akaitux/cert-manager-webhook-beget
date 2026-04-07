@@ -6,8 +6,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/boryashkin/cert-manager-webhook-beget/begetapi"
+	"github.com/akaitux/cert-manager-webhook-beget/begetapi"
 	dns "github.com/cert-manager/cert-manager/test/acme"
+	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 var (
@@ -48,4 +49,65 @@ func TestRunsSuite(t *testing.T) {
 
 	fixture.RunConformance(t)
 
+}
+
+func TestLoadConfigAcceptsName(t *testing.T) {
+	cfg, err := loadConfig(&extapi.JSON{Raw: []byte(`{
+		"apiLoginSecretRef": {
+			"name": "beget-credentials",
+			"key": "login"
+		},
+		"apiPasswdSecretRef": {
+			"name": "beget-credentials",
+			"key": "passwd"
+		}
+	}`)})
+	if err != nil {
+		t.Fatalf("loadConfig returned error: %v", err)
+	}
+
+	if got := cfg.APILoginSecretRef.resourceName(); got != "beget-credentials" {
+		t.Fatalf("unexpected login secret name: %q", got)
+	}
+	if got := cfg.APIPasswdSecretRef.resourceName(); got != "beget-credentials" {
+		t.Fatalf("unexpected password secret name: %q", got)
+	}
+}
+
+func TestLoadConfigAcceptsSecretName(t *testing.T) {
+	cfg, err := loadConfig(&extapi.JSON{Raw: []byte(`{
+		"apiLoginSecretRef": {
+			"secretName": "beget-credentials",
+			"key": "login"
+		},
+		"apiPasswdSecretRef": {
+			"secretName": "beget-credentials",
+			"key": "passwd"
+		}
+	}`)})
+	if err != nil {
+		t.Fatalf("loadConfig returned error: %v", err)
+	}
+
+	if got := cfg.APILoginSecretRef.resourceName(); got != "beget-credentials" {
+		t.Fatalf("unexpected login secret name: %q", got)
+	}
+	if got := cfg.APIPasswdSecretRef.resourceName(); got != "beget-credentials" {
+		t.Fatalf("unexpected password secret name: %q", got)
+	}
+}
+
+func TestLoadConfigRejectsMissingSecretName(t *testing.T) {
+	_, err := loadConfig(&extapi.JSON{Raw: []byte(`{
+		"apiLoginSecretRef": {
+			"key": "login"
+		},
+		"apiPasswdSecretRef": {
+			"name": "beget-credentials",
+			"key": "passwd"
+		}
+	}`)})
+	if err == nil {
+		t.Fatal("expected loadConfig to reject missing secret name")
+	}
 }

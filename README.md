@@ -18,18 +18,36 @@ The module is active, but the underlying API is rarely changing, not much to upd
     - `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.1/cert-manager.yaml`
 - instal the issuer:
     - **NOTE**: The kubernetes resources used to install the Webhook should be deployed within the same namespace as the cert-manager ("cert-manager" by default, check ./deploy/values.yaml).
-    - `helm repo add boryashkin https://boryashkin.github.io/helm-charts/`
-    - `helm repo update`
-    - `helm install cert-beget boryashkin/cert-manager-beget-webhook`
-    - OR
-      - pull this repo
-      - `helm install webhook-beget ./deploy/beget -f ./deploy/values.yaml -n cert-manager`
+    - pull this repo
+    - `helm install webhook-beget ./deploy/beget -f ./deploy/beget/values.yaml -n cert-manager`
+    - default image for release `1.0.1`: `docker.io/akaitux/cert-manager-webhook-beget:1.0.1`
+    - if needed, override explicitly: `--set image.repository=docker.io/akaitux/cert-manager-webhook-beget --set image.tag=1.0.1`
 - create a secret for beget API
 - create an issuer
 - request certificates
 - add the certificates to services
 
+For webhook secret references, prefer this config shape:
+
+```yaml
+config:
+  apiLoginSecretRef:
+    secretName: beget-credentials
+    key: login
+  apiPasswdSecretRef:
+    secretName: beget-credentials
+    key: passwd
+```
+
+The webhook accepts both `name` and `secretName` for backward compatibility, but `secretName` is the recommended form for new manifests.
+
 Follow ***an example*** for details: [testdata/resources](testdata/resources/README.md).
+
+## Release 1.0.1
+
+- Image: `docker.io/akaitux/cert-manager-webhook-beget:1.0.1`
+- Helm chart version: `1.0.1`
+- App version: `1.0.1`
 
 ## Tests
 
