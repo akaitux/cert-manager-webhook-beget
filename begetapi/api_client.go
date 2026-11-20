@@ -3,6 +3,7 @@ package begetapi
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -38,6 +39,17 @@ func NewApiClient(apiURL *url.URL) *ApiClient {
 	}
 }
 
+// net/http errors include the request URL, whose query contains credentials.
+func safeRequestError(err error) error {
+	var requestErr *url.Error
+	if errors.As(err, &requestErr) {
+		safe := *requestErr
+		safe.URL = "[redacted]"
+		return &safe
+	}
+	return err
+}
+
 func (a *ApiClient) GetData(fqdn string, credentials Credentials) (Records, error) {
 	u := *a.apiURL
 	u.Path += "/api/dns/getData"
@@ -70,7 +82,7 @@ func (a *ApiClient) GetData(fqdn string, credentials Credentials) (Records, erro
 
 	r, err := a.client.Post(u.String(), mp.FormDataContentType(), buff)
 	if err != nil {
-		return nil, fmt.Errorf("request for getData failed: %w", err)
+		return nil, fmt.Errorf("request for getData failed: %w", safeRequestError(err))
 	}
 
 	if r.StatusCode != 200 {
@@ -89,7 +101,6 @@ func (a *ApiClient) GetData(fqdn string, credentials Credentials) (Records, erro
 	if err != nil {
 		return nil, fmt.Errorf("unmarshal response: %w", err)
 	}
-	fmt.Println(string(bdy), rsp)
 
 	return rsp.Answer.Result.Records, nil
 }
@@ -132,7 +143,7 @@ func (a *ApiClient) ChangeRecords(fqdn string, records Records, credentials Cred
 
 	r, err := a.client.Post(u.String(), mp.FormDataContentType(), buff)
 	if err != nil {
-		return fmt.Errorf("request for getData failed: %w", err)
+		return fmt.Errorf("request for changeRecords failed: %w", safeRequestError(err))
 	}
 
 	bdy, err := io.ReadAll(r.Body)
@@ -142,7 +153,7 @@ func (a *ApiClient) ChangeRecords(fqdn string, records Records, credentials Cred
 	r.Body.Close()
 
 	if r.StatusCode != 200 {
-		return fmt.Errorf("non 200 response: %d %s", r.StatusCode, bdy)
+		return fmt.Errorf("non 200 response: %d", r.StatusCode)
 	}
 
 	var result ChangeRecordsResponse
@@ -152,7 +163,7 @@ func (a *ApiClient) ChangeRecords(fqdn string, records Records, credentials Cred
 	}
 
 	if !result.Answer.Result {
-		return fmt.Errorf("got result status in response: %s, body: %s", result.Answer.Status, bdy)
+		return fmt.Errorf("API returned unsuccessful changeRecords result")
 	}
 
 	return nil

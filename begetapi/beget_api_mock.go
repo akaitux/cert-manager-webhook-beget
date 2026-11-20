@@ -188,7 +188,6 @@ func baseParamsCheckMiddleware(next http.Handler) http.Handler {
 		fmt.Println("base middleware")
 
 		r.ParseMultipartForm(1024)
-		fmt.Printf("got: %s", r.Form.Encode())
 
 		if r.Form.Has("input_format") && !oneOf[string](r.Form.Get("input_format"), []string{"plain", "json"}) {
 			w.WriteHeader(http.StatusInternalServerError)

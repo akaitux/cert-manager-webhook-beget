@@ -35,11 +35,9 @@ func main() {
 		BegetDnsApiUrl = BegetProductionApiUrl
 	}
 
-	klog.Infof("BEGET_DNS_API_URL=%s", BegetDnsApiUrl)
-
 	begetUrl, err := url.Parse(BegetDnsApiUrl)
 	if err != nil {
-		panic(fmt.Sprintf("failed to parse begetUrl: %s", BegetDnsApiUrl))
+		panic("failed to parse BEGET_DNS_API_URL")
 	}
 
 	cmd.RunWebhookServer(GroupName,
